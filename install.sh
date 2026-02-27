@@ -218,14 +218,10 @@ printf "  ========================\n\n"
 detect_platform
 check_prerequisites
 
-ARCHIVE="eid-service-${OS}-${ARCH}.tar.gz"
-DOWNLOAD_URL="https://github.com/${EID_REPO}/releases/download/v${VERSION:=latest}/${ARCHIVE}"
+resolve_version
 
-# Re-resolve if still "latest" placeholder
-if [ "$VERSION" = "latest" ]; then
-  resolve_version
-  DOWNLOAD_URL="https://github.com/${EID_REPO}/releases/download/v${VERSION}/${ARCHIVE}"
-fi
+ARCHIVE="eid-service-${OS}-${ARCH}.tar.gz"
+DOWNLOAD_URL="https://github.com/${EID_REPO}/releases/download/v${VERSION}/${ARCHIVE}"
 
 info "Platform: ${OS}/${ARCH}"
 info "Version:  v${VERSION}"
