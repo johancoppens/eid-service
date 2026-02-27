@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            os: linux
+            arch: x64
+            archive: eid-service-linux-x64.tar.gz
+            format: tar.gz
+          - runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
+            archive: eid-service-linux-arm64.tar.gz
+            format: tar.gz
+          - runner: macos-13
+            os: darwin
+            arch: x64
+            archive: eid-service-darwin-x64.tar.gz
+            format: tar.gz
+          - runner: macos-latest
+            os: darwin
+            arch: arm64
+            archive: eid-service-darwin-arm64.tar.gz
+            format: tar.gz
+          - runner: windows-latest
+            os: windows
+            arch: x64
+            archive: eid-service-windows-x64.zip
+            format: zip
+
+    runs-on: ${{ matrix.runner }}
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install pcsclite headers (Linux)
+        if: matrix.os == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev
+
+      - name: Install dependencies
+        working-directory: ui/eid/eid-service
+        run: npm install
+
+      - name: Build (Linux/macOS)
+        if: matrix.os != 'windows'
+        working-directory: ui/eid/eid-service
+        run: ./build.sh
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows'
+        working-directory: ui/eid/eid-service
+        shell: pwsh
+        run: |
+          # Detect addon package
+          $AddonPkg = "@pcsc-mini/windows-x86_64-bun"
+          $AddonSrc = "node_modules/$AddonPkg/addon.node"
+
+          if (-not (Test-Path $AddonSrc)) {
+            Write-Error "Native addon not found at $AddonSrc"
+            exit 1
+          }
+
+          # Create patched pcsc-mini for compilation
+          $BuildTmp = ".build-tmp"
+          New-Item -ItemType Directory -Path $BuildTmp -Force | Out-Null
+          New-Item -ItemType Directory -Path "$BuildTmp/node_modules" -Force | Out-Null
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+
+          # Create patched addon loader
+          @'
+          "use strict";
+          const path = require("node:path");
+          const addonPath = path.join(path.dirname(process.execPath), "addon.node");
+          const mod = { exports: {} };
+          process.dlopen(mod, addonPath);
+          module.exports = mod.exports;
+          '@ | Set-Content "$BuildTmp/addon.node.js"
+
+          # Copy and patch pcsc-mini
+          Copy-Item -Recurse "node_modules/pcsc-mini" "$BuildTmp/node_modules/pcsc-mini"
+          Copy-Item "$BuildTmp/addon.node.js" "$BuildTmp/node_modules/pcsc-mini/build/addon.node.js"
+
+          # Copy ws module
+          Copy-Item -Recurse "node_modules/ws" "$BuildTmp/node_modules/ws"
+
+          # Copy host.js
+          Copy-Item "host.js" "$BuildTmp/host.js"
+
+          # Compile
+          bun build --compile "$BuildTmp/host.js" --outfile "dist/eid-service.exe"
+
+          # Copy addon
+          Copy-Item $AddonSrc "dist/addon.node"
+
+          # Clean up
+          Remove-Item -Recurse -Force $BuildTmp
+
+      - name: Create archive (tar.gz)
+        if: matrix.format == 'tar.gz'
+        working-directory: ui/eid/eid-service
+        run: tar -czf "${{ matrix.archive }}" -C dist eid-service addon.node
+
+      - name: Create archive (zip)
+        if: matrix.format == 'zip'
+        working-directory: ui/eid/eid-service
+        shell: pwsh
+        run: Compress-Archive -Path "dist\eid-service.exe","dist\addon.node" -DestinationPath "${{ matrix.archive }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ui/eid/eid-service/${{ matrix.archive }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Create Release
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*

@@ -1,0 +1,12 @@
+{
+  "name": "eid-service",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Local WebSocket service for Belgian eID smart card reading via PC/SC",
+  "main": "host.js",
+  "dependencies": {
+    "pcsc-mini": "^0.1.3",
+    "ws": "^8.18.0"
+  }
+}
