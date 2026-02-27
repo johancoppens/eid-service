@@ -18,7 +18,7 @@ jobs:
             arch: x64
             archive: eid-service-linux-x64.tar.gz
             format: tar.gz
-          - runner: macos-13
+          - runner: macos-latest
             os: darwin
             arch: x64
             archive: eid-service-darwin-x64.tar.gz
@@ -42,17 +42,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libpcsclite-dev
 
       - name: Install dependencies
-        working-directory: ui/eid/eid-service
         run: npm install
 
       - name: Build (Linux/macOS)
         if: matrix.os != 'windows'
-        working-directory: ui/eid/eid-service
         run: ./build.sh
 
       - name: Build (Windows)
         if: matrix.os == 'windows'
-        working-directory: ui/eid/eid-service
         shell: pwsh
         run: |
           # Detect addon package
@@ -101,19 +98,17 @@ jobs:
 
       - name: Create archive (tar.gz)
         if: matrix.format == 'tar.gz'
-        working-directory: ui/eid/eid-service
         run: tar -czf "${{ matrix.archive }}" -C dist eid-service addon.node
 
       - name: Create archive (zip)
         if: matrix.format == 'zip'
-        working-directory: ui/eid/eid-service
         shell: pwsh
         run: Compress-Archive -Path "dist\eid-service.exe","dist\addon.node" -DestinationPath "${{ matrix.archive }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.archive }}
-          path: ui/eid/eid-service/${{ matrix.archive }}
+          path: ${{ matrix.archive }}
 
   release:
     needs: build
