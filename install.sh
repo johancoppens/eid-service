@@ -4,7 +4,7 @@
 #
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/install.sh | sh
-#   curl -sSL ... | sh -s -- --origin https://datahub.edugolo.be
+#   curl -sSL ... | sh -s -- --origin https://mijn-app.example.com
 #   curl -sSL ... | sh -s -- --version v1.2.0
 #   curl -sSL ... | sh -s -- --uninstall
 #
@@ -73,6 +73,25 @@ if [ "$UNINSTALL" = 1 ]; then
     info "Removed ${INSTALL_DIR}"
   else
     warn "Install directory not found: ${INSTALL_DIR}"
+  fi
+
+  # Remove autostart entries
+  if [ "$(uname -s)" = "Linux" ]; then
+    SYSTEMD_FILE="${HOME}/.config/systemd/user/eid-service.service"
+    if [ -f "$SYSTEMD_FILE" ]; then
+      systemctl --user stop eid-service 2>/dev/null || true
+      systemctl --user disable eid-service 2>/dev/null || true
+      rm -f "$SYSTEMD_FILE"
+      systemctl --user daemon-reload 2>/dev/null || true
+      info "Removed systemd user service"
+    fi
+  elif [ "$(uname -s)" = "Darwin" ]; then
+    PLIST_FILE="${HOME}/Library/LaunchAgents/com.local.eid-service.plist"
+    if [ -f "$PLIST_FILE" ]; then
+      launchctl bootout gui/$(id -u) "$PLIST_FILE" 2>/dev/null || launchctl unload "$PLIST_FILE" 2>/dev/null || true
+      rm -f "$PLIST_FILE"
+      info "Removed LaunchAgent"
+    fi
   fi
 
   if [ -d "$CONFIG_DIR" ]; then
@@ -252,7 +271,7 @@ elif [ -t 0 ]; then
   # Interactive — ask user
   printf "\n"
   printf "  Which website(s) may use the eID service?\n"
-  printf "  Enter full URL(s), e.g. https://datahub.edugolo.be\n"
+  printf "  Enter full URL(s), e.g. https://mijn-app.example.com\n"
   printf "  Separate multiple origins with commas.\n"
   printf "  Leave empty to keep current setting.\n\n"
 
@@ -289,7 +308,6 @@ fi
 cat > "$CONFIG_FILE" << EOF
 {
   "port": ${DEFAULT_PORT},
-  "port": ${DEFAULT_PORT},
   "allowedOrigins": ${ORIGINS_JSON}
 }
 EOF
@@ -318,8 +336,71 @@ case ":${PATH}:" in
     ;;
 esac
 
-printf "  Start the service:\n\n"
-printf "    ${INSTALL_DIR}/eid-service\n\n"
+# --- Autostart ---
 
-printf "  Port:        ${DEFAULT_PORT}\n\n"
+if [ "$OS" = "linux" ]; then
+  SYSTEMD_DIR="${HOME}/.config/systemd/user"
+  SYSTEMD_FILE="${SYSTEMD_DIR}/eid-service.service"
+  mkdir -p "$SYSTEMD_DIR"
+  cat > "$SYSTEMD_FILE" << 'UNIT'
+[Unit]
+Description=Belgian eID WebSocket Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.eid-service/eid-service
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+UNIT
+  systemctl --user daemon-reload
+  systemctl --user enable eid-service >/dev/null 2>&1
+  systemctl --user restart eid-service
+  info "Autostart enabled (systemd user service)"
+  info "Service is running"
+
+elif [ "$OS" = "darwin" ]; then
+  PLIST_DIR="${HOME}/Library/LaunchAgents"
+  PLIST_FILE="${PLIST_DIR}/com.local.eid-service.plist"
+  mkdir -p "$PLIST_DIR"
+  cat > "$PLIST_FILE" << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.local.eid-service</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>exec ~/.eid-service/eid-service</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>Crashed</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/eid-service.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/eid-service.err</string>
+</dict>
+</plist>
+PLIST
+  # Stop existing if running, then load new
+  launchctl bootout gui/$(id -u) "$PLIST_FILE" 2>/dev/null || launchctl unload "$PLIST_FILE" 2>/dev/null || true
+  launchctl bootstrap gui/$(id -u) "$PLIST_FILE" 2>/dev/null || launchctl load -w "$PLIST_FILE"
+  info "Autostart enabled (LaunchAgent)"
+  info "Service is running"
+fi
+
+printf "\n"
 printf "  Port:        ${DEFAULT_PORT}\n\n"

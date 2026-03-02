@@ -10,7 +10,7 @@
     irm https://raw.githubusercontent.com/johancoppens/eid-service/main/install.ps1 | iex
 
     # Install with allowed origin
-    .\install.ps1 -Origin "https://datahub.edugolo.be"
+    .\install.ps1 -Origin "https://mijn-app.example.com"
 
     # Install specific version
     .\install.ps1 -Version "1.0.0"
@@ -83,6 +83,14 @@ if ($Uninstall) {
         $NewPath = ($UserPath.Split(";") | Where-Object { $_ -ne $InstallDir }) -join ";"
         [Environment]::SetEnvironmentVariable("PATH", $NewPath, "User")
         Write-Info "Removed from PATH"
+    }
+
+
+    # Remove autostart registry key
+    $RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+    if (Get-ItemProperty -Path $RegPath -Name "EidService" -ErrorAction SilentlyContinue) {
+        Remove-ItemProperty -Path $RegPath -Name "EidService"
+        Write-Info "Removed autostart registry key"
     }
 
     if (Test-Path $ConfigDir) {
@@ -182,7 +190,7 @@ if ($Origin) {
     # Interactive prompt
     Write-Host ""
     Write-Host "  Which website(s) may use the eID service?"
-    Write-Host "  Enter full URL(s), e.g. https://datahub.edugolo.be"
+    Write-Host "  Enter full URL(s), e.g. https://mijn-app.example.com"
     Write-Host "  Separate multiple origins with commas."
     Write-Host "  Leave empty to allow all origins (development only)."
     Write-Host ""
@@ -228,14 +236,22 @@ if (-not $UserPath.Contains($InstallDir)) {
     Write-Info "Already in PATH"
 }
 
-# --- Summary ---
+# --- Autostart ---
 
-Write-Host ""
-Write-Host "  Setup complete!" -ForegroundColor White
-Write-Host ""
-Write-Host "  Start the service:"
-Write-Host ""
-Write-Host "    $InstallDir\eid-service.exe" -ForegroundColor Cyan
+$ExePath = Join-Path $InstallDir "eid-service.exe"
+$RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+Set-ItemProperty -Path $RegPath -Name "EidService" -Value "`"$ExePath`""
+Write-Info "Autostart enabled (registry)"
+
+# Start the service now
+$Existing = Get-Process -Name "eid-service" -ErrorAction SilentlyContinue
+if ($Existing) {
+    Stop-Process -Name "eid-service" -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+}
+Start-Process -FilePath $ExePath -WindowStyle Hidden
+Write-Info "Service is running"
+
 Write-Host ""
 Write-Host "  Port:        $DefaultPort"
 Write-Host ""
