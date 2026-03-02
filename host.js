@@ -93,18 +93,23 @@ async function runConfigWizard () {
   console.log("  Welke website(s) mogen de eID service gebruiken?")
   console.log("  Geef volledige URL(s), bv. https://mijn-app.example.com")
   console.log("  Meerdere origins scheiden met komma's.")
-  console.log("  Leeg laten om alle origins toe te staan (enkel voor development).")
+  console.log("  Typ * om alle origins toe te staan (enkel voor development).")
   console.log("")
   if (existing.allowedOrigins.length > 0) {
     console.log(`  Huidig: ${existing.allowedOrigins.join(", ")}`)
+  } else {
+    console.log("  Huidig: * (alle origins)")
   }
   const originsInput = await ask(rl, "  Origin(s): ")
+  const trimmed = originsInput.trim().replace(/^"+|"+$/g, "")
 
   let allowedOrigins
-  if (originsInput.trim()) {
-    allowedOrigins = originsInput.split(",").map(o => o.trim().replace(/\/+$/, "")).filter(Boolean)
-  } else {
+  if (trimmed === "") {
     allowedOrigins = existing.allowedOrigins
+  } else if (trimmed === "*") {
+    allowedOrigins = []
+  } else {
+    allowedOrigins = trimmed.split(",").map(o => o.trim().replace(/\/+$/, "")).filter(Boolean)
   }
 
 
