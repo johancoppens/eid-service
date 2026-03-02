@@ -43,6 +43,7 @@ To set an allowed origin during installation:
 
 * `~/.eid-service/`: Contains the binary and addon files.
 * `~/.config/eid-service/`: Contains the configuration file.
+* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%APPDATA%\eid-service\` (configuration).
 
 ## Configuration
 
@@ -60,6 +61,9 @@ The configuration file is located at `~/.config/eid-service/config.json`. The fo
   "allowedOrigins": ["https://example.com"]
 }
 ```
+
+* Enter keeps the current value. Use `*` to allow all origins (development mode).
+
 ## Commands
 
 | Command | Description |
@@ -292,7 +296,7 @@ Om een toegestane origin in te stellen tijdens de installatie:
 
 * `~/.eid-service/`: Bevat de binary en addon bestanden.
 * `~/.config/eid-service/`: Bevat het configuratiebestand.
-
+* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%APPDATA%\eid-service\` (configuratie).
 ### Configuratie
 
 Start de interactieve configuratie om de poort en toegestane origins in te stellen:
@@ -309,6 +313,9 @@ Het configuratiebestand bevindt zich in `~/.config/eid-service/config.json`. Het
   "allowedOrigins": ["https://example.com"]
 }
 ```
+
+* Leeg laten behoudt de huidige waarde. Typ `*` om alle origins toe te staan (development mode).
+
 ### Commando's
 
 | Commando | Beschrijving |
