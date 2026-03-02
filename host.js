@@ -28,12 +28,13 @@
  *   { "id": "uuid", "success": false, "error": "...", "code": "..." }
  */
 
-import { readFileSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
+import { createInterface } from "node:readline"
+import { randomUUID } from "node:crypto"
 import { WebSocketServer } from "ws"
 import * as pcsc from "pcsc-mini"
-
 const { CardMode, CardDisposition, ReaderStatus } = pcsc
 
 // --- Configuration ---
@@ -58,7 +59,93 @@ function loadConfig () {
   }
 }
 
+function ask (rl, question) {
+  return new Promise((resolve) => rl.question(question, resolve))
+}
+
+async function runConfigWizard () {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+
+  // Load existing config if available
+  let existing = { fingerprint: null, port: DEFAULT_PORT, allowedOrigins: [] }
+  try {
+    const raw = readFileSync(CONFIG_FILE, "utf-8")
+    existing = { ...existing, ...JSON.parse(raw) }
+  } catch {
+    // No existing config — fresh setup
+  }
+
+  console.log("")
+  console.log("  \x1b[1meID Service — Configuratie\x1b[0m")
+  console.log("  ==========================")
+  console.log("")
+
+  // Port
+  const portInput = await ask(rl, `  Poort [${existing.port}]: `)
+  const port = portInput.trim() ? parseInt(portInput.trim(), 10) : existing.port
+  if (isNaN(port) || port < 1 || port > 65535) {
+    console.error("  \x1b[31m✗\x1b[0m Ongeldige poort")
+    rl.close()
+    process.exit(1)
+  }
+
+  // Origins
+  console.log("")
+  console.log("  Welke website(s) mogen de eID service gebruiken?")
+  console.log("  Geef volledige URL(s), bv. https://datahub.edugolo.be")
+  console.log("  Meerdere origins scheiden met komma's.")
+  console.log("  Leeg laten om alle origins toe te staan (enkel voor development).")
+  console.log("")
+  if (existing.allowedOrigins.length > 0) {
+    console.log(`  Huidig: ${existing.allowedOrigins.join(", ")}`)
+  }
+  const originsInput = await ask(rl, "  Origin(s): ")
+
+  let allowedOrigins
+  if (originsInput.trim()) {
+    allowedOrigins = originsInput.split(",").map(o => o.trim().replace(/\/+$/, "")).filter(Boolean)
+  } else {
+    allowedOrigins = existing.allowedOrigins
+  }
+
+  // Fingerprint
+  const fingerprint = existing.fingerprint || randomUUID()
+  if (!existing.fingerprint) {
+    console.log("")
+    console.log("  \x1b[32m✓\x1b[0m Nieuwe fingerprint aangemaakt")
+  }
+
+  // Write config
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  const configData = JSON.stringify({ fingerprint, port, allowedOrigins }, null, 2)
+  writeFileSync(CONFIG_FILE, configData + "\n")
+
+  console.log("")
+  console.log("  \x1b[32m✓\x1b[0m Configuratie opgeslagen: " + CONFIG_FILE)
+  console.log("")
+  console.log(`  Fingerprint: ${fingerprint}`)
+  console.log(`  Poort:       ${port}`)
+  if (allowedOrigins.length > 0) {
+    console.log(`  Origins:     ${allowedOrigins.join(", ")}`)
+  } else {
+    console.log("  Origins:     \x1b[33m⚠\x1b[0m  alle origins (development mode)")
+  }
+  console.log("")
+
+  rl.close()
+}
+
+// --- CLI: `eid-service config` ---
+
+if (process.argv[2] === "config") {
+  runConfigWizard()
+} else {
+  startServer()
+}
+
+function startServer () {
 const config = loadConfig()
+
 
 // --- Belgian eID constants (proven working) ---
 
@@ -462,3 +549,4 @@ function shutdown () {
 
 process.on("SIGINT", shutdown)
 process.on("SIGTERM", shutdown)
+}
