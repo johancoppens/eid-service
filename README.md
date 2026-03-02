@@ -248,6 +248,8 @@ The `EidCard` component displays the card data in a styled card layout with a Be
 eid-service uninstall
 ```
 
+This stops the service, removes the autostart registration, the binary, and the PATH entry. You will be asked whether to keep or remove the configuration.
+
 ## Nederlands
 
 eID Service leest Belgische eID smartcards uit via de webbrowser. Het bestaat uit een lichtgewicht lokale service die via PC/SC met de kaartlezer communiceert en de data beschikbaar stelt via een WebSocket. Elke webapplicatie kan hiermee verbinden om identiteitsgegevens, adresgegevens en de pasfoto van de kaart te lezen.
@@ -497,3 +499,5 @@ De `EidCard` component toont de kaartgegevens in een vormgegeven kaart lay-out m
 ```sh
 eid-service uninstall
 ```
+
+Dit stopt de service, verwijdert de autostart-registratie, de binary en de PATH-verwijzing. Je wordt gevraagd of je de configuratie wilt behouden of verwijderen.
