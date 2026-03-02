@@ -61,18 +61,25 @@ The configuration file is located at `~/.config/eid-service/config.json`. The fo
 }
 ```
 
-## Usage
+## Autostart
 
-Start the service from your terminal:
+The installer automatically registers the service to start at login and launches it immediately. No manual action is needed.
+
+* **Linux**: systemd user service (`~/.config/systemd/user/eid-service.service`)
+* **macOS**: LaunchAgent (`~/Library/LaunchAgents/com.local.eid-service.plist`)
+* **Windows**: Registry key (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
+
+The service restarts automatically after a crash (Linux and macOS).
+
+To check the status or control the service manually:
 
 ```sh
-eid-service
-```
+# Linux
+systemctl --user status eid-service
+systemctl --user restart eid-service
 
-If the command is not in your PATH, you can start it directly:
-
-```sh
-~/.eid-service/eid-service
+# macOS — view logs
+cat /tmp/eid-service.log
 ```
 
 ## Protocol Reference
@@ -312,18 +319,25 @@ Het configuratiebestand bevindt zich in `~/.config/eid-service/config.json`. Het
 }
 ```
 
-### Gebruik
+### Autostart
 
-Start de service via de terminal:
+De installer registreert de service automatisch om te starten bij het inloggen en start hem meteen op. Er is geen manuele actie nodig.
+
+* **Linux**: systemd user service (`~/.config/systemd/user/eid-service.service`)
+* **macOS**: LaunchAgent (`~/Library/LaunchAgents/com.local.eid-service.plist`)
+* **Windows**: Registersleutel (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
+
+De service herstart automatisch na een crash (Linux en macOS).
+
+Om de status te controleren of de service handmatig te beheren:
 
 ```sh
-eid-service
-```
+# Linux
+systemctl --user status eid-service
+systemctl --user restart eid-service
 
-Als het commando niet in je PATH staat, kan je het direct starten:
-
-```sh
-~/.eid-service/eid-service
+# macOS — logs bekijken
+cat /tmp/eid-service.log
 ```
 
 ### Protocol Referentie
