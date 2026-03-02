@@ -244,16 +244,8 @@ The `EidCard` component displays the card data in a styled card layout with a Be
 
 ## Uninstallation
 
-Linux / macOS:
-
 ```sh
-curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/install.sh | sh -s -- --uninstall
-```
-
-Windows:
-
-```powershell
-.\install.ps1 -Uninstall
+eid-service uninstall
 ```
 
 ## Nederlands
@@ -502,14 +494,6 @@ De `EidCard` component toont de kaartgegevens in een vormgegeven kaart lay-out m
 
 ### Verwijderen
 
-Linux / macOS:
-
 ```sh
-curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/install.sh | sh -s -- --uninstall
-```
-
-Windows:
-
-```powershell
-.\install.ps1 -Uninstall
+eid-service uninstall
 ```

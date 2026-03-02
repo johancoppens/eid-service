@@ -28,10 +28,11 @@
  *   { "id": "uuid", "success": false, "error": "...", "code": "..." }
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs"
 import { join } from "node:path"
-import { homedir } from "node:os"
+import { homedir, platform } from "node:os"
 import { createInterface } from "node:readline"
+import { execSync, spawn } from "node:child_process"
 import { WebSocketServer } from "ws"
 import * as pcsc from "pcsc-mini"
 const { CardMode, CardDisposition, ReaderStatus } = pcsc
@@ -126,10 +127,86 @@ async function runConfigWizard () {
   rl.close()
 }
 
-// --- CLI: `eid-service config` ---
+// --- Uninstall ---
+
+async function runUninstall () {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+
+  console.log("")
+  console.log("  \x1b[1meID Service — Uninstall\x1b[0m")
+  console.log("  =======================")
+  console.log("")
+
+  const os = platform()
+  const installDir = join(homedir(), ".eid-service")
+
+  // 1. Stop autostart service
+  if (os === "linux") {
+    const serviceFile = join(homedir(), ".config", "systemd", "user", "eid-service.service")
+    if (existsSync(serviceFile)) {
+      try { execSync("systemctl --user stop eid-service", { stdio: "ignore" }) } catch {}
+      try { execSync("systemctl --user disable eid-service", { stdio: "ignore" }) } catch {}
+      rmSync(serviceFile, { force: true })
+      try { execSync("systemctl --user daemon-reload", { stdio: "ignore" }) } catch {}
+      console.log("  \x1b[32m✓\x1b[0m Removed systemd user service")
+    }
+  } else if (os === "darwin") {
+    const plistFile = join(homedir(), "Library", "LaunchAgents", "com.local.eid-service.plist")
+    if (existsSync(plistFile)) {
+      try { execSync(`launchctl bootout gui/$(id -u) "${plistFile}"`, { stdio: "ignore" }) } catch {
+        try { execSync(`launchctl unload "${plistFile}"`, { stdio: "ignore" }) } catch {}
+      }
+      rmSync(plistFile, { force: true })
+      console.log("  \x1b[32m✓\x1b[0m Removed LaunchAgent")
+    }
+  } else if (os === "win32") {
+    try {
+      execSync('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v EidService /f', { stdio: "ignore" })
+      console.log("  \x1b[32m✓\x1b[0m Removed autostart registry key")
+    } catch {}
+  }
+
+  // 2. Remove install directory
+  if (existsSync(installDir)) {
+    if (os === "win32") {
+      // Windows: can't delete running binary, schedule delayed cleanup
+      const cmd = `cmd /c "timeout /t 2 /nobreak >NUL && rmdir /s /q \"${installDir}\""`
+      spawn(cmd, [], { shell: true, detached: true, stdio: "ignore" }).unref()
+      console.log("  \x1b[32m✓\x1b[0m Install directory will be removed shortly")
+    } else {
+      rmSync(installDir, { recursive: true, force: true })
+      console.log("  \x1b[32m✓\x1b[0m Removed " + installDir)
+    }
+  } else {
+    console.log("  \x1b[33m⚠\x1b[0m Install directory not found: " + installDir)
+  }
+
+  // 3. Optionally remove config
+  if (existsSync(CONFIG_DIR)) {
+    console.log("")
+    const answer = await ask(rl, `  Remove configuration (${CONFIG_DIR})? [y/N] `)
+    if (answer.trim().match(/^[yY]/)) {
+      rmSync(CONFIG_DIR, { recursive: true, force: true })
+      console.log("  \x1b[32m✓\x1b[0m Removed " + CONFIG_DIR)
+    } else {
+      console.log("  \x1b[32m✓\x1b[0m Configuration kept")
+    }
+  }
+
+  console.log("")
+  console.log("  \x1b[32m✓\x1b[0m eID service uninstalled.")
+  console.log("")
+
+  rl.close()
+  process.exit(0)
+}
+
+// --- CLI: `eid-service config` / `eid-service uninstall` ---
 
 if (process.argv.includes("config")) {
   runConfigWizard()
+} else if (process.argv.includes("uninstall")) {
+  runUninstall()
 } else {
   startServer()
 }

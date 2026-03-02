@@ -6,7 +6,7 @@
 #   curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/install.sh | sh
 #   curl -sSL ... | sh -s -- --origin https://mijn-app.example.com
 #   curl -sSL ... | sh -s -- --version v1.2.0
-#   curl -sSL ... | sh -s -- --uninstall
+#   curl -sSL ... | sh -s -- --uninstall   (or: eid-service uninstall)
 #
 # Environment variables:
 #   EID_REPO  — GitHub repo (default: johancoppens/eid-service)
