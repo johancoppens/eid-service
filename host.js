@@ -140,6 +140,16 @@ async function runConfigWizard () {
       console.log("  \x1b[32m\u2713\x1b[0m Service herstart")
       console.log("")
     } catch {}
+  } else if (os === "win32") {
+    try {
+      execSync("taskkill /IM eid-service.exe /F", { stdio: "ignore" })
+      const exePath = join(homedir(), "AppData", "Local", "eid-service", "eid-service.exe")
+      if (existsSync(exePath)) {
+        spawn(exePath, ["start"], { detached: true, stdio: "ignore" }).unref()
+      }
+      console.log("  \x1b[32m\u2713\x1b[0m Service herstart")
+      console.log("")
+    } catch {}
   }
 
   rl.close()

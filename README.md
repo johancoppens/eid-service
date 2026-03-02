@@ -60,6 +60,14 @@ The configuration file is located at `~/.config/eid-service/config.json`. The fo
   "allowedOrigins": ["https://example.com"]
 }
 ```
+## Commands
+
+| Command | Description |
+|---|---|
+| `eid-service` | Show status and available commands |
+| `eid-service start` | Start the service (foreground) |
+| `eid-service config` | Interactive configuration wizard (restarts the service automatically) |
+| `eid-service uninstall` | Remove the service, autostart, binary, and PATH entry |
 
 ## Autostart
 
@@ -70,17 +78,6 @@ The installer automatically registers the service to start at login and launches
 * **Windows**: Registry key (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
 
 The service restarts automatically after a crash (Linux and macOS).
-
-To check the status or control the service manually:
-
-```sh
-# Linux
-systemctl --user status eid-service
-systemctl --user restart eid-service
-
-# macOS — view logs
-cat /tmp/eid-service.log
-```
 
 ## Protocol Reference
 
@@ -312,6 +309,14 @@ Het configuratiebestand bevindt zich in `~/.config/eid-service/config.json`. Het
   "allowedOrigins": ["https://example.com"]
 }
 ```
+### Commando's
+
+| Commando | Beschrijving |
+|---|---|
+| `eid-service` | Toon status en beschikbare commando's |
+| `eid-service start` | Start de service (voorgrond) |
+| `eid-service config` | Interactieve configuratie (herstart de service automatisch) |
+| `eid-service uninstall` | Service, autostart, binary en PATH-verwijzing verwijderen |
 
 ### Autostart
 
@@ -322,17 +327,6 @@ De installer registreert de service automatisch om te starten bij het inloggen e
 * **Windows**: Registersleutel (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
 
 De service herstart automatisch na een crash (Linux en macOS).
-
-Om de status te controleren of de service handmatig te beheren:
-
-```sh
-# Linux
-systemctl --user status eid-service
-systemctl --user restart eid-service
-
-# macOS — logs bekijken
-cat /tmp/eid-service.log
-```
 
 ### Protocol Referentie
 
