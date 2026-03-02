@@ -240,7 +240,7 @@ if (-not $UserPath.Contains($InstallDir)) {
 
 $ExePath = Join-Path $InstallDir "eid-service.exe"
 $RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-Set-ItemProperty -Path $RegPath -Name "EidService" -Value "`"$ExePath`""
+Set-ItemProperty -Path $RegPath -Name "EidService" -Value "`"$ExePath`" start"
 Write-Info "Autostart enabled (registry)"
 
 # Start the service now
@@ -249,7 +249,7 @@ if ($Existing) {
     Stop-Process -Name "eid-service" -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 500
 }
-Start-Process -FilePath $ExePath -WindowStyle Hidden
+Start-Process -FilePath $ExePath -ArgumentList "start" -WindowStyle Hidden
 Write-Info "Service is running"
 
 Write-Host ""

@@ -122,7 +122,25 @@ async function runConfigWizard () {
   } else {
     console.log("  Origins:     \x1b[33m⚠\x1b[0m  alle origins (development mode)")
   }
-  console.log("")
+
+  // Restart service if running
+  const os = platform()
+  if (os === "linux") {
+    try {
+      const status = execSync("systemctl --user is-active eid-service 2>/dev/null", { encoding: "utf-8" }).trim()
+      if (status === "active") {
+        execSync("systemctl --user restart eid-service", { stdio: "ignore" })
+        console.log("  \x1b[32m\u2713\x1b[0m Service herstart")
+        console.log("")
+      }
+    } catch {}
+  } else if (os === "darwin") {
+    try {
+      execSync("launchctl kickstart -k gui/$(id -u)/com.local.eid-service", { stdio: "ignore" })
+      console.log("  \x1b[32m\u2713\x1b[0m Service herstart")
+      console.log("")
+    } catch {}
+  }
 
   rl.close()
 }
@@ -218,14 +236,74 @@ async function runUninstall () {
   process.exit(0)
 }
 
-// --- CLI: `eid-service config` / `eid-service uninstall` ---
+// --- Status / Usage ---
 
-if (process.argv.includes("config")) {
+function showStatus () {
+  const BOLD = "\x1b[1m"
+  const RESET = "\x1b[0m"
+  const GREEN = "\x1b[32m"
+  const RED = "\x1b[31m"
+  const YELLOW = "\x1b[33m"
+  const DIM = "\x1b[2m"
+
+  console.log("")
+  console.log(`  ${BOLD}eID Service${RESET}`)
+  console.log("")
+
+  // Config status
+  let config = null
+  if (existsSync(CONFIG_FILE)) {
+    try {
+      config = JSON.parse(readFileSync(CONFIG_FILE, "utf-8"))
+      console.log(`  Config:     ${GREEN}\u2713${RESET} ${CONFIG_FILE}`)
+      console.log(`  Port:       ${config.port || DEFAULT_PORT}`)
+      if (config.allowedOrigins?.length > 0) {
+        console.log(`  Origins:    ${config.allowedOrigins.join(", ")}`)
+      } else {
+        console.log(`  Origins:    ${YELLOW}\u26a0${RESET}  alle origins (development mode)`)
+      }
+    } catch {
+      console.log(`  Config:     ${RED}\u2717${RESET} ongeldig: ${CONFIG_FILE}`)
+    }
+  } else {
+    console.log(`  Config:     ${RED}\u2717${RESET} niet gevonden`)
+  }
+
+  // Service status
+  const os = platform()
+  if (os === "linux") {
+    try {
+      const result = execSync("systemctl --user is-active eid-service 2>/dev/null", { encoding: "utf-8" }).trim()
+      console.log(`  Service:    ${result === "active" ? GREEN + "\u2713 running" : RED + "\u2717 " + result}${RESET}`)
+    } catch {
+      console.log(`  Service:    ${DIM}niet geregistreerd${RESET}`)
+    }
+  } else if (os === "darwin") {
+    const plistFile = join(homedir(), "Library", "LaunchAgents", "com.local.eid-service.plist")
+    console.log(`  Service:    ${existsSync(plistFile) ? GREEN + "\u2713 LaunchAgent geregistreerd" : DIM + "niet geregistreerd"}${RESET}`)
+  }
+
+  console.log("")
+  console.log(`  ${BOLD}Commando's:${RESET}`)
+  console.log("")
+  console.log(`  ${DIM}eid-service start${RESET}       Start de service (voorgrond)`)
+  console.log(`  ${DIM}eid-service config${RESET}      Configuratie aanpassen`)
+  console.log(`  ${DIM}eid-service uninstall${RESET}   Service verwijderen`)
+  console.log("")
+}
+
+// --- CLI routing ---
+
+const cmd = process.argv.find(a => ["config", "uninstall", "start"].includes(a))
+
+if (cmd === "config") {
   runConfigWizard()
-} else if (process.argv.includes("uninstall")) {
+} else if (cmd === "uninstall") {
   runUninstall()
-} else {
+} else if (cmd === "start") {
   startServer()
+} else {
+  showStatus()
 }
 
 function startServer () {

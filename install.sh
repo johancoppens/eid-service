@@ -373,7 +373,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/.eid-service/eid-service
+ExecStart=%h/.eid-service/eid-service start
 Restart=on-failure
 RestartSec=5
 
@@ -401,7 +401,7 @@ elif [ "$OS" = "darwin" ]; then
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>exec ~/.eid-service/eid-service</string>
+        <string>exec ~/.eid-service/eid-service start</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
