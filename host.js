@@ -169,7 +169,7 @@ async function runUninstall () {
   console.log("")
 
   const os = platform()
-  const installDir = join(homedir(), ".eid-service")
+  const installDir = os === "win32" ? join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "eid-service") : join(homedir(), ".eid-service")
 
   // 1. Stop autostart service
   if (os === "linux") {
@@ -194,6 +194,20 @@ async function runUninstall () {
     try {
       execSync('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v EidService /f', { stdio: "ignore" })
       console.log("  \x1b[32m✓\x1b[0m Removed autostart registry key")
+    } catch {}
+    // Remove install dir from user PATH
+    try {
+      const result = execSync('reg query HKCU\\Environment /v Path', { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] })
+      const match = result.match(/Path\s+REG_(?:EXPAND_)?SZ\s+(.*)$/m)
+      if (match) {
+        const oldPath = match[1].trim()
+        const parts = oldPath.split(";").filter(p => !p.toLowerCase().includes("eid-service"))
+        const newPath = parts.join(";")
+        if (newPath !== oldPath) {
+          execSync(`reg add HKCU\\Environment /v Path /t REG_EXPAND_SZ /d "${newPath}" /f`, { stdio: "ignore" })
+          console.log("  \x1b[32m✓\x1b[0m Removed PATH entry")
+        }
+      }
     } catch {}
   }
 
@@ -294,6 +308,13 @@ function showStatus () {
   } else if (os === "darwin") {
     const plistFile = join(homedir(), "Library", "LaunchAgents", "com.local.eid-service.plist")
     console.log(`  Service:    ${existsSync(plistFile) ? GREEN + "\u2713 LaunchAgent geregistreerd" : DIM + "niet geregistreerd"}${RESET}`)
+  } else if (os === "win32") {
+    try {
+      execSync('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v EidService', { stdio: ["pipe", "pipe", "ignore"] })
+      console.log(`  Autostart:  ${GREEN}\u2713 geregistreerd${RESET}`)
+    } catch {
+      console.log(`  Autostart:  ${DIM}niet geregistreerd${RESET}`)
+    }
   }
 
   console.log("")
@@ -330,7 +351,7 @@ try {
   pcsc = await import("pcsc-mini")
 } catch (err) {
   console.error("[eid-service] Failed to load PC/SC module:", err.message)
-  console.error("[eid-service] Make sure addon.node is next to the eid-service binary.")
+  console.error("[eid-service] Make sure addon.node and node_modules are in the installation directory.")
   process.exit(1)
 }
 const { CardMode, CardDisposition, ReaderStatus } = pcsc

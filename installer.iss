@@ -22,17 +22,20 @@ PrivilegesRequired=lowest
 ChangesEnvironment=yes
 
 [Files]
-Source: "dist\eid-service.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\bun.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\host.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\addon.node"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\eid-service.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "EidService"; ValueType: string; ValueData: """{app}\eid-service.exe"" start"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "EidService"; ValueType: string; ValueData: """{app}\bun.exe"" ""{app}\host.js"" start"; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\eid-service.exe"; Parameters: "start"; Flags: nowait postinstall runhidden; Description: "Start eID Service"
+Filename: "{app}\bun.exe"; Parameters: """{app}\host.js"" start"; Flags: nowait postinstall runhidden; Description: "Start eID Service"
 
 [UninstallRun]
-Filename: "taskkill.exe"; Parameters: "/IM eid-service.exe /F"; Flags: runhidden; RunOnceId: "StopService"
+Filename: "taskkill.exe"; Parameters: "/IM bun.exe /F"; Flags: runhidden; RunOnceId: "StopService"
 
 [Code]
 
@@ -40,7 +43,7 @@ procedure StopExistingService;
 var
   ResultCode: Integer;
 begin
-  Exec('taskkill.exe', '/IM eid-service.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill.exe', '/IM bun.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500);
 end;
 

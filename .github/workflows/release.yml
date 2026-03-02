@@ -52,8 +52,9 @@ jobs:
         if: matrix.os == 'windows'
         shell: pwsh
         run: |
-          # Detect addon package
-          $AddonPkg = "@pcsc-mini/windows-x86_64-node"
+          # No compilation on Windows — ship bun runtime + source files
+          # This avoids the native addon NAPI symbol resolution issue in compiled binaries
+          $AddonPkg = "@pcsc-mini/windows-x86_64-bun"
           $AddonSrc = "node_modules/$AddonPkg/addon.node"
 
           if (-not (Test-Path $AddonSrc)) {
@@ -61,40 +62,25 @@ jobs:
             exit 1
           }
 
-          # Create patched pcsc-mini for compilation
-          $BuildTmp = ".build-tmp"
-          New-Item -ItemType Directory -Path $BuildTmp -Force | Out-Null
-          New-Item -ItemType Directory -Path "$BuildTmp/node_modules" -Force | Out-Null
           New-Item -ItemType Directory -Path "dist" -Force | Out-Null
 
-          # Create patched addon loader
-          @'
-          "use strict";
-          const path = require("node:path");
-          const addonPath = path.join(path.dirname(process.execPath), "addon.node");
-          const mod = { exports: {} };
-          process.dlopen(mod, addonPath);
-          module.exports = mod.exports;
-          '@ | Set-Content "$BuildTmp/addon.node.js"
+          # Copy Bun runtime
+          $BunPath = (Get-Command bun).Source
+          Copy-Item $BunPath "dist/bun.exe"
 
-          # Copy and patch pcsc-mini
-          Copy-Item -Recurse "node_modules/pcsc-mini" "$BuildTmp/node_modules/pcsc-mini"
-          Copy-Item "$BuildTmp/addon.node.js" "$BuildTmp/node_modules/pcsc-mini/build/addon.node.js"
+          # Copy application source
+          Copy-Item "host.js" "dist/host.js"
 
-          # Copy ws module
-          Copy-Item -Recurse "node_modules/ws" "$BuildTmp/node_modules/ws"
-
-          # Copy host.js
-          Copy-Item "host.js" "$BuildTmp/host.js"
-
-          # Compile
-          bun build --compile "$BuildTmp/host.js" --outfile "dist/eid-service.exe"
-
-          # Copy addon
+          # Copy native addon
           Copy-Item $AddonSrc "dist/addon.node"
 
-          # Clean up
-          Remove-Item -Recurse -Force $BuildTmp
+          # Copy required node_modules
+          New-Item -ItemType Directory -Path "dist/node_modules" -Force | Out-Null
+          Copy-Item -Recurse "node_modules/ws" "dist/node_modules/ws"
+          Copy-Item -Recurse "node_modules/pcsc-mini" "dist/node_modules/pcsc-mini"
+
+          # Create eid-service.cmd wrapper for CLI usage
+          @('@echo off', '"%~dp0bun.exe" "%~dp0host.js" %*') | Set-Content "dist/eid-service.cmd" -Encoding ASCII
 
       - name: Install Inno Setup
         if: matrix.os == 'windows'
@@ -114,7 +100,7 @@ jobs:
       - name: Create archive (zip)
         if: matrix.format == 'zip'
         shell: pwsh
-        run: Compress-Archive -Path "dist\eid-service.exe","dist\addon.node" -DestinationPath "${{ matrix.archive }}"
+        run: Compress-Archive -Path "dist\*" -DestinationPath "${{ matrix.archive }}"
 
       - uses: actions/upload-artifact@v4
         with:
