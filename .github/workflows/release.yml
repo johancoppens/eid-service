@@ -53,7 +53,7 @@ jobs:
         shell: pwsh
         run: |
           # Detect addon package
-          $AddonPkg = "@pcsc-mini/windows-x86_64-bun"
+          $AddonPkg = "@pcsc-mini/windows-x86_64-node"
           $AddonSrc = "node_modules/$AddonPkg/addon.node"
 
           if (-not (Test-Path $AddonSrc)) {
