@@ -247,14 +247,18 @@ info "Installed to ${INSTALL_DIR}/"
 printf "\n"
 mkdir -p "$CONFIG_DIR"
 
-# Preserve existing fingerprint
+# Preserve existing config values
 FINGERPRINT=""
+EXISTING_ORIGINS_JSON=""
 if [ -f "$CONFIG_FILE" ]; then
   EXISTING_FP=$(grep '"fingerprint"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*"fingerprint"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
   if [ -n "$EXISTING_FP" ]; then
     FINGERPRINT="$EXISTING_FP"
     info "Existing fingerprint preserved"
   fi
+
+  # Preserve existing allowedOrigins JSON array
+  EXISTING_ORIGINS_JSON=$(grep '"allowedOrigins"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*"allowedOrigins"[[:space:]]*:[[:space:]]*\(\[.*\]\).*/\1/' || true)
 fi
 
 if [ -z "$FINGERPRINT" ]; then
@@ -275,14 +279,10 @@ elif [ -t 0 ]; then
   printf "  Which website(s) may use the eID service?\n"
   printf "  Enter full URL(s), e.g. https://datahub.edugolo.be\n"
   printf "  Separate multiple origins with commas.\n"
-  printf "  Leave empty to allow all origins (development only).\n\n"
+  printf "  Leave empty to keep current setting.\n\n"
 
-  # Show existing origins if available
-  if [ -f "$CONFIG_FILE" ]; then
-    EXISTING_ORIGINS=$(grep '"allowedOrigins"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*\[\(.*\)\].*/\1/' | tr -d '"' || true)
-    if [ -n "$EXISTING_ORIGINS" ]; then
-      printf "  Current: ${EXISTING_ORIGINS}\n"
-    fi
+  if [ -n "$EXISTING_ORIGINS_JSON" ] && [ "$EXISTING_ORIGINS_JSON" != "[]" ]; then
+    printf "  Current: ${EXISTING_ORIGINS_JSON}\n"
   fi
 
   printf "  Origin(s): "
@@ -293,11 +293,18 @@ elif [ -t 0 ]; then
   fi
 fi
 
-# Build JSON array from comma-separated input
+# Build JSON array from comma-separated input, or preserve existing
 if [ -n "$ALLOWED_ORIGINS" ]; then
   # Convert "https://a.com, https://b.com" → ["https://a.com","https://b.com"]
   ORIGINS_JSON=$(printf '%s' "$ALLOWED_ORIGINS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/\/*$//' | awk 'BEGIN{printf "["} NR>1{printf ","} {printf "\"%s\"",$0} END{printf "]"}')
   info "Origins configured: ${ORIGINS_JSON}"
+elif [ -n "$EXISTING_ORIGINS_JSON" ]; then
+  ORIGINS_JSON="$EXISTING_ORIGINS_JSON"
+  if [ "$ORIGINS_JSON" = "[]" ]; then
+    warn "No origins configured — all origins allowed (development mode)"
+  else
+    info "Existing origins preserved: ${ORIGINS_JSON}"
+  fi
 else
   ORIGINS_JSON="[]"
   warn "No origins configured — all origins allowed (development mode)"
