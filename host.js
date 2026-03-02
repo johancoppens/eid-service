@@ -6,7 +6,7 @@
  * with the Data Hub web client via WebSocket on a local port.
  *
  * Configuration: ~/.config/eid-service/config.json
- *   { "fingerprint": "uuid", "port": 17365, "allowedOrigins": ["https://example.com"] }
+   { "port": 17365, "allowedOrigins": ["https://example.com"] }
  *
  * Protocol:
  *
@@ -15,7 +15,7 @@
  *   { "action": "read", "id": "uuid" }
  *
  * Server → Client (on connection):
- *   { "type": "event", "event": "ready", "fingerprint": "...", "pcscReady": true, "readerConnected": true, "cardPresent": true }
+ *   { "type": "event", "event": "ready", "pcscReady": true, "readerConnected": true, "cardPresent": true }
  *
  * Server → Client (events, broadcast):
  *   { "type": "event", "event": "card-inserted", "reader": "..." }
@@ -32,7 +32,6 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { homedir } from "node:os"
 import { createInterface } from "node:readline"
-import { randomUUID } from "node:crypto"
 import { WebSocketServer } from "ws"
 import * as pcsc from "pcsc-mini"
 const { CardMode, CardDisposition, ReaderStatus } = pcsc
@@ -48,8 +47,7 @@ function loadConfig () {
     const raw = readFileSync(CONFIG_FILE, "utf-8")
     const config = JSON.parse(raw)
     return {
-      fingerprint: config.fingerprint || null,
-      port: config.port || DEFAULT_PORT,
+      port: config.port || 17365,
       allowedOrigins: config.allowedOrigins || [],
     }
   } catch {
@@ -67,7 +65,7 @@ async function runConfigWizard () {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
 
   // Load existing config if available
-  let existing = { fingerprint: null, port: DEFAULT_PORT, allowedOrigins: [] }
+  let existing = { port: DEFAULT_PORT, allowedOrigins: [] }
   try {
     const raw = readFileSync(CONFIG_FILE, "utf-8")
     existing = { ...existing, ...JSON.parse(raw) }
@@ -108,22 +106,15 @@ async function runConfigWizard () {
     allowedOrigins = existing.allowedOrigins
   }
 
-  // Fingerprint
-  const fingerprint = existing.fingerprint || randomUUID()
-  if (!existing.fingerprint) {
-    console.log("")
-    console.log("  \x1b[32m✓\x1b[0m Nieuwe fingerprint aangemaakt")
-  }
 
   // Write config
   mkdirSync(CONFIG_DIR, { recursive: true })
-  const configData = JSON.stringify({ fingerprint, port, allowedOrigins }, null, 2)
+  const configData = JSON.stringify({ port, allowedOrigins }, null, 2)
   writeFileSync(CONFIG_FILE, configData + "\n")
 
   console.log("")
   console.log("  \x1b[32m✓\x1b[0m Configuratie opgeslagen: " + CONFIG_FILE)
   console.log("")
-  console.log(`  Fingerprint: ${fingerprint}`)
   console.log(`  Poort:       ${port}`)
   if (allowedOrigins.length > 0) {
     console.log(`  Origins:     ${allowedOrigins.join(", ")}`)
@@ -386,7 +377,7 @@ async function handleMessage (ws, message) {
     switch (action) {
       case "health": {
         const status = getStatus()
-        sendTo(ws, { id, success: true, data: { fingerprint: config.fingerprint, ...status } })
+        sendTo(ws, { id, success: true, data: status })
         break
       }
 
@@ -496,12 +487,11 @@ const wss = new WebSocketServer({
 wss.on("connection", (ws, req) => {
   clients.add(ws)
 
-  // Send ready event with fingerprint and current status
+  // Send ready event with current status
   const status = getStatus()
   sendTo(ws, {
     type: "event",
     event: "ready",
-    fingerprint: config.fingerprint,
     ...status,
   })
 
@@ -529,7 +519,6 @@ wss.on("connection", (ws, req) => {
 
 wss.on("listening", () => {
   console.log(`[eid-service] WebSocket server gestart op ws://127.0.0.1:${config.port}`)
-  console.log(`[eid-service] Fingerprint: ${config.fingerprint}`)
   if (config.allowedOrigins.length > 0) {
     console.log(`[eid-service] Toegestane origins: ${config.allowedOrigins.join(", ")}`)
   } else {

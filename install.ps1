@@ -168,24 +168,6 @@ try {
 Write-Host ""
 New-Item -ItemType Directory -Path $ConfigDir -Force | Out-Null
 
-# Preserve existing fingerprint
-$Fingerprint = ""
-if (Test-Path $ConfigFile) {
-    try {
-        $ExistingConfig = Get-Content $ConfigFile -Raw | ConvertFrom-Json
-        if ($ExistingConfig.fingerprint) {
-            $Fingerprint = $ExistingConfig.fingerprint
-            Write-Info "Existing fingerprint preserved"
-        }
-    } catch {
-        # Config corrupt — generate new
-    }
-}
-
-if (-not $Fingerprint) {
-    $Fingerprint = [guid]::NewGuid().ToString()
-    Write-Info "Generated new fingerprint"
-}
 
 # --- Allowed origins ---
 
@@ -228,7 +210,6 @@ if ($Origin) {
 # Write config
 $ConfigContent = @"
 {
-  "fingerprint": "$Fingerprint",
   "port": $DefaultPort,
   "allowedOrigins": $OriginsJson
 }
@@ -256,6 +237,5 @@ Write-Host "  Start the service:"
 Write-Host ""
 Write-Host "    $InstallDir\eid-service.exe" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Fingerprint: $Fingerprint"
 Write-Host "  Port:        $DefaultPort"
 Write-Host ""

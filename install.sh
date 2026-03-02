@@ -194,19 +194,6 @@ resolve_version() {
   printf " v${VERSION}\n"
 }
 
-# --- Generate fingerprint ---
-
-generate_fingerprint() {
-  if [ -f /proc/sys/kernel/random/uuid ]; then
-    cat /proc/sys/kernel/random/uuid
-  elif command -v uuidgen >/dev/null 2>&1; then
-    uuidgen | tr '[:upper:]' '[:lower:]'
-  else
-    # POSIX fallback — hex from /dev/urandom
-    od -An -tx1 -N16 /dev/urandom | tr -d ' \n' | sed 's/\(.\{8\}\)\(.\{4\}\)\(.\{4\}\)\(.\{4\}\)\(.\{12\}\)/\1-\2-\3-\4-\5/'
-  fi
-}
-
 # ============================================================
 # Main
 # ============================================================
@@ -248,22 +235,10 @@ printf "\n"
 mkdir -p "$CONFIG_DIR"
 
 # Preserve existing config values
-FINGERPRINT=""
 EXISTING_ORIGINS_JSON=""
 if [ -f "$CONFIG_FILE" ]; then
-  EXISTING_FP=$(grep '"fingerprint"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*"fingerprint"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || true)
-  if [ -n "$EXISTING_FP" ]; then
-    FINGERPRINT="$EXISTING_FP"
-    info "Existing fingerprint preserved"
-  fi
-
   # Preserve existing allowedOrigins JSON array
   EXISTING_ORIGINS_JSON=$(grep '"allowedOrigins"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*"allowedOrigins"[[:space:]]*:[[:space:]]*\(\[.*\]\).*/\1/' || true)
-fi
-
-if [ -z "$FINGERPRINT" ]; then
-  FINGERPRINT=$(generate_fingerprint)
-  info "Generated new fingerprint"
 fi
 
 # --- Allowed origins ---
@@ -313,7 +288,7 @@ fi
 # Write config
 cat > "$CONFIG_FILE" << EOF
 {
-  "fingerprint": "${FINGERPRINT}",
+  "port": ${DEFAULT_PORT},
   "port": ${DEFAULT_PORT},
   "allowedOrigins": ${ORIGINS_JSON}
 }
@@ -346,5 +321,5 @@ esac
 printf "  Start the service:\n\n"
 printf "    ${INSTALL_DIR}/eid-service\n\n"
 
-printf "  Fingerprint: ${FINGERPRINT}\n"
+printf "  Port:        ${DEFAULT_PORT}\n\n"
 printf "  Port:        ${DEFAULT_PORT}\n\n"
