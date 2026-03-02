@@ -52,7 +52,7 @@ function loadConfig () {
     }
   } catch {
     console.error(`[eid-service] Configuratie niet gevonden: ${CONFIG_FILE}`)
-    console.error("[eid-service] Voer eerst het install script uit om de service te configureren.")
+    console.error("[eid-service] Voer 'eid-service config' uit om de service te configureren.")
     process.exit(1)
   }
 }
@@ -128,7 +128,7 @@ async function runConfigWizard () {
 
 // --- CLI: `eid-service config` ---
 
-if (process.argv[2] === "config") {
+if (process.argv.includes("config")) {
   runConfigWizard()
 } else {
   startServer()
