@@ -34,8 +34,6 @@ import { homedir, platform } from "node:os"
 import { createInterface } from "node:readline"
 import { execSync, spawn } from "node:child_process"
 import { WebSocketServer } from "ws"
-import * as pcsc from "pcsc-mini"
-const { CardMode, CardDisposition, ReaderStatus } = pcsc
 
 // --- Configuration ---
 
@@ -316,13 +314,27 @@ if (cmd === "config") {
 } else if (cmd === "uninstall") {
   runUninstall()
 } else if (cmd === "start") {
-  startServer()
+  startServer().catch(err => {
+    console.error("[eid-service] Failed to start:", err.message)
+    process.exit(1)
+  })
 } else {
   showStatus()
 }
 
-function startServer () {
+async function startServer () {
 const config = loadConfig()
+
+let pcsc
+try {
+  pcsc = await import("pcsc-mini")
+} catch (err) {
+  console.error("[eid-service] Failed to load PC/SC module:", err.message)
+  console.error("[eid-service] Make sure addon.node is next to the eid-service binary.")
+  process.exit(1)
+}
+const { CardMode, CardDisposition, ReaderStatus } = pcsc
+
 
 
 // --- Belgian eID constants (proven working) ---
@@ -476,7 +488,7 @@ async function readBelgianEid (card) {
 
 // --- PC/SC state management ---
 
-/** @type {pcsc.Client | null} */
+/** @type {import("pcsc-mini").Client | null} */
 let pcscClient = null
 /** @type {Map<object, { name: string, hasCard: boolean }>} */
 const readers = new Map()
