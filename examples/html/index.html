@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>eID Service — Plain JS Example</title>
+</head>
+<body>
+  <h1>eID Service</h1>
+  <p id="status">Connecting…</p>
+  <div id="card" hidden>
+    <h2>Identity</h2>
+    <img id="photo" width="140">
+    <table id="identity"></table>
+    <h2>Address</h2>
+    <table id="address"></table>
+  </div>
+
+  <script>
+    const PORT = 17365
+    const HEALTH_POLL = 2000
+
+    // --- TLV parser (Belgian eID binary format) ---
+
+    function base64ToBytes (b64) {
+      const bin = atob(b64)
+      const bytes = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+      return bytes
+    }
+
+    function parseTlv (data) {
+      const records = []
+      let offset = 0
+      while (offset < data.length) {
+        const tag = data[offset++]
+        if (tag === 0x00 || offset >= data.length) break
+        let length
+        const first = data[offset++]
+        if (first < 0x80) {
+          length = first
+        } else if (first === 0x81) {
+          if (offset >= data.length) break
+          length = data[offset++]
+        } else if (first === 0x82) {
+          if (offset + 1 >= data.length) break
+          length = (data[offset] << 8) | data[offset + 1]
+          offset += 2
+        } else {
+          break
+        }
+        if (offset + length > data.length) break
+        records.push({ tag, value: data.slice(offset, offset + length) })
+        offset += length
+      }
+      return records
+    }
+
+    function tlvToMap (b64) {
+      const decoder = new TextDecoder("utf-8")
+      const map = {}
+      for (const r of parseTlv(base64ToBytes(b64))) {
+        map[r.tag] = decoder.decode(r.value).trim()
+      }
+      return map
+    }
+
+    // Belgian eID identity file tags
+    const ID = {
+      cardNumber: 0x01, nationalNumber: 0x06,
+      surname: 0x07, firstNames: 0x08,
+      nationality: 0x0a, birthLocation: 0x0b,
+      birthDate: 0x0c, sex: 0x0d,
+      validityBegin: 0x03, validityEnd: 0x04,
+      deliveryMunicipality: 0x05
+    }
+
+    // Belgian eID address file tags
+    const ADDR = { street: 0x01, zipCode: 0x02, municipality: 0x03 }
+
+    // --- DOM helpers ---
+
+    const $ = (id) => document.getElementById(id)
+
+    function fillTable (tableEl, map, tags) {
+      tableEl.innerHTML = ""
+      for (const [label, tag] of Object.entries(tags)) {
+        if (!map[tag]) continue
+        const tr = document.createElement("tr")
+        tr.innerHTML = "<td><b>" + label + "</b></td><td>" + map[tag] + "</td>"
+        tableEl.appendChild(tr)
+      }
+    }
+
+    function showCard (data) {
+      const id = tlvToMap(data.identity)
+      const addr = tlvToMap(data.address)
+      $("photo").src = "data:image/jpeg;base64," + data.photo
+      fillTable($("identity"), id, ID)
+      fillTable($("address"), addr, ADDR)
+      $("card").hidden = false
+      $("status").textContent = "Card read successfully"
+    }
+
+    function hideCard () {
+      $("card").hidden = true
+    }
+
+    // --- WebSocket client ---
+
+    let ws = null
+    let reqId = 0
+    let healthTimer = null
+    const pending = {}
+
+    function send (action) {
+      return new Promise((resolve, reject) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          return reject(new Error("Not connected"))
+        }
+        const id = String(++reqId)
+        const timer = setTimeout(() => {
+          delete pending[id]
+          reject(new Error("Timeout"))
+        }, 15000)
+        pending[id] = { resolve, reject, timer }
+        ws.send(JSON.stringify({ action, id }))
+      })
+    }
+
+    function onMessage (event) {
+      const msg = JSON.parse(event.data)
+
+      // Server event
+      if (msg.type === "event") {
+        if (msg.event === "card-inserted") readCard()
+        if (msg.event === "card-removed") hideCard()
+        if (msg.event === "ready") $("status").textContent = msg.cardPresent ? "Card detected" : "Waiting for card…"
+        return
+      }
+
+      // Response
+      if (msg.id && pending[msg.id]) {
+        const p = pending[msg.id]
+        delete pending[msg.id]
+        clearTimeout(p.timer)
+        msg.success ? p.resolve(msg.data) : p.reject(new Error(msg.error || "Unknown error"))
+      }
+    }
+
+    async function readCard () {
+      $("status").textContent = "Reading card…"
+      try {
+        const data = await send("read")
+        showCard(data)
+      } catch (err) {
+        $("status").textContent = "Read error: " + err.message
+      }
+    }
+
+    async function pollHealth () {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return
+      try {
+        const h = await send("health")
+        if (h.cardPresent && $("card").hidden) readCard()
+      } catch { /* ignore */ }
+    }
+
+    function connect () {
+      $("status").textContent = "Connecting…"
+      ws = new WebSocket("ws://127.0.0.1:" + PORT)
+      ws.onmessage = onMessage
+      ws.onclose = () => {
+        ws = null
+        clearInterval(healthTimer)
+        $("status").textContent = "Disconnected — reconnecting…"
+        hideCard()
+        setTimeout(connect, 2000)
+      }
+      ws.onopen = () => {
+        healthTimer = setInterval(pollHealth, HEALTH_POLL)
+      }
+      ws.onerror = () => {} // onclose handles reconnect
+    }
+
+    connect()
+  </script>
+</body>
+</html>
