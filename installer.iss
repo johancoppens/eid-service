@@ -50,7 +50,7 @@ var
   ConfigPath: String;
   Content: String;
 begin
-  ConfigDir := ExpandConstant('{userappdata}\eid-service');
+  ConfigDir := ExpandConstant('{%USERPROFILE}') + '\.config\eid-service';
   ConfigPath := ConfigDir + '\config.json';
 
   if not DirExists(ConfigDir) then
@@ -122,7 +122,7 @@ begin
   begin
     RemoveFromUserPath;
 
-    ConfigDir := ExpandConstant('{userappdata}\eid-service');
+    ConfigDir := ExpandConstant('{%USERPROFILE}') + '\.config\eid-service';
     if DirExists(ConfigDir) then
     begin
       if MsgBox('Remove configuration files?', mbConfirmation, MB_YESNO) = IDYES then

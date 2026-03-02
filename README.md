@@ -39,7 +39,7 @@ eid-service config
 
 * `~/.eid-service/`: Contains the binary and addon files.
 * `~/.config/eid-service/`: Contains the configuration file.
-* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%APPDATA%\eid-service\` (configuration).
+* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%USERPROFILE%\.config\eid-service\` (configuration).
 
 ## Configuration
 
@@ -288,7 +288,7 @@ eid-service config
 
 * `~/.eid-service/`: Bevat de binary en addon bestanden.
 * `~/.config/eid-service/`: Bevat het configuratiebestand.
-* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%APPDATA%\eid-service\` (configuratie).
+* **Windows**: `%LOCALAPPDATA%\eid-service\` (binary), `%USERPROFILE%\.config\eid-service\` (configuratie).
 ### Configuratie
 
 Start de interactieve configuratie om de poort en toegestane origins in te stellen:
