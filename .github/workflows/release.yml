@@ -78,6 +78,7 @@ jobs:
           New-Item -ItemType Directory -Path "dist/node_modules" -Force | Out-Null
           Copy-Item -Recurse "node_modules/ws" "dist/node_modules/ws"
           Copy-Item -Recurse "node_modules/pcsc-mini" "dist/node_modules/pcsc-mini"
+          Copy-Item -Recurse "node_modules/@pcsc-mini" "dist/node_modules/@pcsc-mini"
 
           # Create eid-service.cmd wrapper for CLI usage
           @('@echo off', '"%~dp0bun.exe" "%~dp0host.js" %*') | Set-Content "dist/eid-service.cmd" -Encoding ASCII
