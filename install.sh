@@ -256,8 +256,8 @@ mkdir -p "$CONFIG_DIR"
 # Preserve existing config values
 EXISTING_ORIGINS_JSON=""
 if [ -f "$CONFIG_FILE" ]; then
-  # Preserve existing allowedOrigins JSON array
-  EXISTING_ORIGINS_JSON=$(grep '"allowedOrigins"' "$CONFIG_FILE" 2>/dev/null | sed 's/.*"allowedOrigins"[[:space:]]*:[[:space:]]*\(\[.*\]\).*/\1/' || true)
+  # Preserve existing allowedOrigins JSON array (handle multiline JSON)
+  EXISTING_ORIGINS_JSON=$(tr -d '\n' < "$CONFIG_FILE" 2>/dev/null | sed 's/.*"allowedOrigins"[[:space:]]*:[[:space:]]*\(\[.*\]\).*/\1/' || true)
 fi
 
 # --- Allowed origins ---
