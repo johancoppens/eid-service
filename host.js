@@ -90,7 +90,7 @@ async function runConfigWizard () {
   // Origins
   console.log("")
   console.log("  Welke website(s) mogen de eID service gebruiken?")
-  console.log("  Geef volledige URL(s), bv. https://datahub.edugolo.be")
+  console.log("  Geef volledige URL(s), bv. https://mijn-app.example.com")
   console.log("  Meerdere origins scheiden met komma's.")
   console.log("  Leeg laten om alle origins toe te staan (enkel voor development).")
   console.log("")
