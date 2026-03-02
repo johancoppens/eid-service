@@ -166,6 +166,23 @@ async function runUninstall () {
     } catch {}
   }
 
+  // 2. Remove PATH entry from shell profile
+  if (os !== "win32") {
+    for (const rc of [".bashrc", ".zshrc"]) {
+      const rcFile = join(homedir(), rc)
+      if (existsSync(rcFile)) {
+        try {
+          const content = readFileSync(rcFile, "utf-8")
+          const filtered = content.split("\n").filter(l => !l.includes(".eid-service") && l !== "# eID Service").join("\n")
+          if (filtered !== content) {
+            writeFileSync(rcFile, filtered)
+            console.log(`  \x1b[32m\u2713\x1b[0m Removed PATH entry from ~/${rc}`)
+          }
+        } catch {}
+      }
+    }
+  }
+
   // 2. Remove install directory
   if (existsSync(installDir)) {
     if (os === "win32") {

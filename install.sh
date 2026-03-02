@@ -94,6 +94,16 @@ if [ "$UNINSTALL" = 1 ]; then
     fi
   fi
 
+  # Remove PATH entry from shell profile
+  for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if [ -f "$RC_FILE" ] && grep -qF '.eid-service' "$RC_FILE" 2>/dev/null; then
+      sed -i.bak '/.eid-service/d' "$RC_FILE"
+      sed -i.bak '/# eID Service/d' "$RC_FILE"
+      rm -f "${RC_FILE}.bak"
+      info "Removed PATH entry from ${RC_FILE}"
+    fi
+  done
+
   if [ -d "$CONFIG_DIR" ]; then
     printf "\n"
     printf "  Remove configuration (${CONFIG_DIR})? [y/N] "
@@ -314,7 +324,7 @@ EOF
 
 info "Config saved: ${CONFIG_FILE}"
 
-# --- Add to PATH hint ---
+# --- Add to PATH ---
 
 printf "\n"
 printf "  ${BOLD}Setup complete!${RESET}\n\n"
@@ -325,14 +335,28 @@ case ":${PATH}:" in
     info "Already in PATH"
     ;;
   *)
-    printf "  To add to PATH, run:\n\n"
     SHELL_NAME=$(basename "${SHELL:-/bin/sh}")
     case "$SHELL_NAME" in
-      zsh)  printf "    echo 'export PATH=\"\$HOME/.eid-service:\$PATH\"' >> ~/.zshrc\n" ;;
-      fish) printf "    fish_add_path ~/.eid-service\n" ;;
-      *)    printf "    echo 'export PATH=\"\$HOME/.eid-service:\$PATH\"' >> ~/.bashrc\n" ;;
+      zsh)  PROFILE="$HOME/.zshrc" ;;
+      fish) PROFILE="" ;;
+      *)    PROFILE="$HOME/.bashrc" ;;
     esac
-    printf "\n"
+
+    if [ "$SHELL_NAME" = "fish" ]; then
+      fish -c "fish_add_path ${INSTALL_DIR}" 2>/dev/null || true
+      info "Added to PATH (fish)"
+    elif [ -n "$PROFILE" ]; then
+      LINE='export PATH="$HOME/.eid-service:$PATH"'
+      if ! grep -qF '.eid-service' "$PROFILE" 2>/dev/null; then
+        printf '\n# eID Service\n%s\n' "$LINE" >> "$PROFILE"
+        info "Added to PATH in ${PROFILE}"
+        info "Run: source ${PROFILE}  (or open a new terminal)"
+      else
+        info "Already in ${PROFILE}"
+      fi
+    fi
+    # Make available in current session
+    export PATH="${INSTALL_DIR}:${PATH}"
     ;;
 esac
 
