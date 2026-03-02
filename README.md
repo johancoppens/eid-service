@@ -27,16 +27,12 @@ curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/instal
 
 ### Windows
 
-Run this in PowerShell:
+Download the installer from [GitHub Releases](https://github.com/johancoppens/eid-service/releases/latest) and run `eid-service-windows-x64-setup.exe`. The installer sets up the service, autostart, and PATH automatically.
 
-```powershell
-irm https://raw.githubusercontent.com/johancoppens/eid-service/main/install.ps1 | iex
-```
+After installation, configure allowed origins:
 
-To set an allowed origin during installation:
-
-```powershell
-.\install.ps1 -Origin "https://your-app.com"
+```sh
+eid-service config
 ```
 
 ### Install Layout
@@ -280,16 +276,12 @@ curl -sSL https://raw.githubusercontent.com/johancoppens/eid-service/main/instal
 
 #### Windows
 
-Voer dit uit in PowerShell:
+Download de installer van [GitHub Releases](https://github.com/johancoppens/eid-service/releases/latest) en voer `eid-service-windows-x64-setup.exe` uit. De installer configureert de service, autostart en PATH automatisch.
 
-```powershell
-irm https://raw.githubusercontent.com/johancoppens/eid-service/main/install.ps1 | iex
-```
+Na de installatie, stel de toegestane origins in:
 
-Om een toegestane origin in te stellen tijdens de installatie:
-
-```powershell
-.\install.ps1 -Origin "https://your-app.com"
+```sh
+eid-service config
 ```
 
 #### Installatie Mappen

@@ -96,6 +96,17 @@ jobs:
           # Clean up
           Remove-Item -Recurse -Force $BuildTmp
 
+      - name: Install Inno Setup
+        if: matrix.os == 'windows'
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $Version = "${{ github.ref_name }}" -replace "^v", ""
+          iscc /DAppVersion="$Version" installer.iss
+
       - name: Create archive (tar.gz)
         if: matrix.format == 'tar.gz'
         run: tar -czf "${{ matrix.archive }}" -C dist eid-service addon.node
@@ -109,6 +120,12 @@ jobs:
         with:
           name: ${{ matrix.archive }}
           path: ${{ matrix.archive }}
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows'
+        with:
+          name: eid-service-windows-x64-setup.exe
+          path: eid-service-windows-x64-setup.exe
 
   release:
     needs: build
