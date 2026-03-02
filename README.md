@@ -179,11 +179,11 @@ The card returns the identity and address as base64-encoded TLV (Tag-Length-Valu
 
 ## Vue Integration
 
-These Vue-specific tools live outside the `eid-service` repository in a parent project. They provide a simple integration for Vue applications.
+A complete Vue example application is included in `examples/vue/`. It demonstrates the composable, the card display component, and auto-read behavior.
 
 ### `useEid()` Composable
 
-The `useEid()` composable wraps `beid.ts` with Vue reactive state. It connects automatically on mount, disconnects on unmount, and polls health every 2 seconds.
+The `useEid()` composable wraps `beid.ts` with Vue reactive state. It connects automatically on mount, disconnects on unmount, polls health every 2 seconds, and automatically reads the card when inserted.
 
 It returns the following readonly reactive state:
 
@@ -198,7 +198,6 @@ It returns the following readonly reactive state:
 
 It exposes these methods:
 
-* `read()`: Read the card.
 * `connectToService()`: Manually reconnect.
 * `checkBackend()`: Manually check service health.
 
@@ -211,7 +210,7 @@ import EidCard from "./components/EidCard.vue"
 
 const {
   status, serviceConnected, readerConnected, cardPresent,
-  cardData, read
+  cardData
 } = useEid()
 </script>
 
@@ -220,8 +219,6 @@ const {
     <p>Service: {{ serviceConnected ? 'Connected' : 'Disconnected' }}</p>
     <p>Reader: {{ readerConnected ? 'Ready' : 'No reader' }}</p>
     <p>Card: {{ cardPresent ? 'Inserted' : 'No card' }}</p>
-
-    <button v-if="cardPresent" @click="read">Read Card</button>
 
     <EidCard v-if="cardData" :data="cardData" />
   </div>
@@ -433,11 +430,11 @@ De kaart retourneert de identiteit en het adres als base64-gecodeerde TLV (Tag-L
 
 ### Vue Integratie
 
-Deze Vue-specifieke tools bevinden zich buiten de `eid-service` repository in een bovenliggend project. Ze bieden een eenvoudige integratie voor Vue applicaties.
+Een volledige Vue voorbeeldapplicatie is opgenomen in `examples/vue/`. Deze demonstreert de composable, het kaart-weergavecomponent en het automatische uitlezen.
 
 #### `useEid()` Composable
 
-De `useEid()` composable wikkelt `beid.ts` in met Vue reactieve status. Het verbindt automatisch bij het monteren, verbreekt de verbinding bij ontmonteren en controleert de status elke 2 seconden.
+De `useEid()` composable wikkelt `beid.ts` in met Vue reactieve status. Het verbindt automatisch bij het monteren, verbreekt de verbinding bij ontmonteren, controleert de status elke 2 seconden en leest de kaart automatisch uit wanneer deze wordt geplaatst.
 
 Het retourneert de volgende alleen-lezen reactieve status:
 
@@ -452,7 +449,6 @@ Het retourneert de volgende alleen-lezen reactieve status:
 
 Het stelt deze methoden beschikbaar:
 
-* `read()`: Lees de kaart.
 * `connectToService()`: Handmatig opnieuw verbinden.
 * `checkBackend()`: Handmatig de service status controleren.
 
@@ -465,7 +461,7 @@ import EidCard from "./components/EidCard.vue"
 
 const {
   status, serviceConnected, readerConnected, cardPresent,
-  cardData, read
+  cardData
 } = useEid()
 </script>
 
@@ -474,8 +470,6 @@ const {
     <p>Service: {{ serviceConnected ? 'Connected' : 'Disconnected' }}</p>
     <p>Reader: {{ readerConnected ? 'Ready' : 'No reader' }}</p>
     <p>Card: {{ cardPresent ? 'Inserted' : 'No card' }}</p>
-
-    <button v-if="cardPresent" @click="read">Read Card</button>
 
     <EidCard v-if="cardData" :data="cardData" />
   </div>
